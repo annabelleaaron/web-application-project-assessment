@@ -7,7 +7,7 @@
 * To run the application in the terminal:
 ```
 cd air_whakatu
-set FLASK_APP=webapp
+set FLASK_APP=webapp (Windows) OR export set FLASK_APP=webapp (Linux and macOS)
 python -m flask run
 ```
 ___
@@ -21,8 +21,8 @@ render_template: home.html
 ```
 ```
 Route: /arrivals-departures
-Read method: GET
-Return SQL data: select * from airlines.flight;
+Return SQL data: select FlightNum, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime from airline.flight where addtime(FlightDate,DepTime) >= '2022-10-26 17:00' and addtime(FlightDate,DepTime) <= '2022-11-2 17:00' order by addtime(FlightDate,DepTime);
+Pass data variables: dbresult=select_result, dbcols=column_name
 render_template: arrivals-departures.html
 ```
 ```

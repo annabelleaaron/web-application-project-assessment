@@ -1,0 +1,8 @@
+{% extends "layout.html" %}
+{% block title %}
+Air Whakatū - Home page
+{% endblock %}
+{% block content %}
+<a href="{{ url_for('arrivalsdepartures')}}">Arrivals & Departures</a> <br>
+<a href="{{ url_for('login')}}">Book a flight</a>
+{% endblock %}

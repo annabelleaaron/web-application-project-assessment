@@ -1,8 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html class="h-100">
     <head>
         <meta charset="utf-8">
-        <title>Test</title>
+        <!--Title of the page-->
+        <title>{% block title %}{% endblock %}</title>
+        <!--Bootstrap CDN-->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
     </head>
+    <body class="d-flex flex-column h-100">
+        <main class="flex-shrink-0">
+            <div class="container">
+                <!--Header-->
+                <header>
+                    <div class="container">
+                        <img src="{{ url_for('static', filename='logo_blue.jpg')}}" />
+                    </div>
+                </header>
+                <!--Body content-->
+                <div>
+                    <div class="container mt-3 mb-3">
+                        {% block content %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!--Footer-->
+        <footer class="footer mt-auto py-3 bg-light">
+            <div class="container">
+                <p>Contact details: 123 Cessna Lane, Tāhunanui, Nelson 7011, fly@airwhakatu.co.nz, ph. 03 555 1234</p>
+            </div>
+        </footer>
+    </body>
 </html>

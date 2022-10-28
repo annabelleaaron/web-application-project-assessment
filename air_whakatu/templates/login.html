@@ -1,0 +1,161 @@
+{% extends "layout.html" %}
+{% block title %}
+Air Whakatū - Login
+{% endblock %}
+{% block content %}
+<section class="h-100 h-custom gradient-custom-2">
+    <div class="container py-1 h-100">
+      <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col-12">
+          <div class="card" style="border-radius: 15px;">
+            <div class="card-body p-0">
+              <div class="row g-0">
+                <div class="col-lg-6">
+                  <div class="p-5">
+                    <form class="needs-validation" novalidate action="{{ url_for('login')}}" method="POST">
+                        <h3 class="fw-normal mb-3" style="color: rgb(70, 70, 255);">Login</h3>
+
+                        <div class="mb-4">
+                            <div class="form-outline form-white">
+                                <label class="form-label" for="login-email-address">Email Address</label>
+                                <input type="email" name="login-email-address" id="login-email-address" placeholder="johnsmith@email.com" required class="form-control form-control-lg" />
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                                {% if denied %}
+                                    <p class="text-danger">This account does not exist. Please register an account.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <button type="submit" name="login-submit" id="login-submit" class="btn btn-light btn-lg"
+                            data-mdb-ripple-color="dark">Login</button>
+
+                    </form>
+                  </div>
+                </div>
+
+                <div class="col-lg-6 text-white" style="background-color: rgb(70, 70, 255); border-top-right-radius: 15px; border-bottom-right-radius: 15px;">
+                  <div class="p-5">
+                    <form class="needs-validation" novalidate>
+                        <h3 class="fw-normal mb-3">Register</h3>
+  
+                        <div class="row">
+                            <div class="row">
+                                <div class="col-md-6 mb-2 pb-2">
+                                    <div class="form-outline">
+                                        <label class="form-label" for="register-first-name">First name</label>
+                                        <input type="text" name="register-first-name" id="register-first-name" placeholder="John" required class="form-control form-control-lg" />
+                                        <div class="invalid-feedback">
+                                            Please enter your first name.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-2 pb-2">
+                                    <div class="form-outline">
+                                        <label class="form-label" for="register-last-name">Last name</label>
+                                        <input type="text" name="register-last-name" id="register-last-name" placeholder="Smith" required class="form-control form-control-lg" />
+                                        <div class="invalid-feedback">
+                                            Please enter your last name.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="form-outline form-white">
+                                    <label class="form-label" for="register-email-address">Email Address</label>
+                                    <input type="email" name="register-email-address" id="register-email-address" placeholder="johnsmith@email.com" required class="form-control form-control-lg" />
+                                    <div class="invalid-feedback">
+                                        Please enter a valid email address.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-5 mb-2 pb-2">
+                                    <div class="form-outline form-white">
+                                        <label class="form-label" for="register-code">Code +</label>
+                                        <input type="number" name="register-code" id="register-code" placeholder="01 / 012" required class="form-control form-control-lg" />
+                                        <div class="invalid-feedback">
+                                            Please enter a valid code.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-7 mb-2 pb-2">
+                                    <div class="form-outline form-white">
+                                        <label class="form-label" for="register-phone-number">Phone Number</label>
+                                        <input type="tel" name="register-phone-number" id="register-phone-number" placeholder="345-6789" pattern="[0-9]{3}-[0-9]{4}" required class="form-control form-control-lg" />
+                                        <div class="invalid-feedback">
+                                            Please enter valid phone number.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-7 mb-2 pb-2">
+                                    <div class="mb-2 pb-2">
+                                        <div class="form-outline form-white">
+                                            <label class="form-label" for="register-passport-number">Passport Number</label>
+                                            <input name="register-passport-number" id="register-passport-number" required class="form-control form-control-lg" />
+                                            <div class="invalid-feedback">
+                                                Please enter a passport number.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-5 mb-2 pb-2">
+                                    <div class="mb-2 pb-2">
+                                        <div class="form-outline form-white">
+                                            <label class="form-label" for="register-dateofbirth">Date Of Birth</label>
+                                            <input type="date" name="register-dateofbirth" id="register-dateofbirth" required class="form-control form-control-lg" />
+                                            <div class="invalid-feedback">
+                                                Please enter a date of birth.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-light btn-lg"
+                            data-mdb-ripple-color="dark">Register</button>
+                    </form>
+                    
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</section>
+
+<!--Script for disabling form submissions if there are invalid fields-->
+<script>
+    (function () {
+        'use strict'
+
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('.needs-validation')
+
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+                }
+
+                form.classList.add('was-validated')
+            }, false)
+            })
+    })()
+</script>
+{% endblock %}

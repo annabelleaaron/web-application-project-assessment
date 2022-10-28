@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for
+from flask import Flask, render_template, url_for, request, redirect
 import mysql.connector
 from . import connect
 import uuid
@@ -41,6 +41,23 @@ def arrivalsdepartures():
     return render_template('arrivals-departures.html', dbresult=select_result, dbcols=column_names)
 
 # leads to the page for the user to login before booking for any flights
-@app.route("/login")
+@app.route("/login", methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    denied = False
+    if request.method == 'POST':
+        email = request.form.get('login-email-address')
+        cur = getCursor()
+        cur.execute("select EmailAddress from airline.passenger where EmailAddress=%s",(email))
+        record = cur.fetchone()
+        print(record)
+        if record:
+            return redirect(url_for('booking'))
+        else:
+            denied = True
+            return render_template('login.html', denied=denied)
+    else:
+        return render_template('login.html')
+    
+@app.route("/booking")
+def booking():
+    return render_template('booking.html')

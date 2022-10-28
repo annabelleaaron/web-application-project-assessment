@@ -44,10 +44,12 @@ def arrivalsdepartures():
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     denied = False
-    if request.method == 'POST':
+    registration = False
+    if "login-submit" in request.form and request.method == 'POST':
         email = request.form.get('login-email-address')
+        print(email)
         cur = getCursor()
-        cur.execute("select EmailAddress from airline.passenger where EmailAddress=%s",(email))
+        cur.execute("select EmailAddress from airline.passenger where EmailAddress=%s",(email,))
         record = cur.fetchone()
         print(record)
         if record:
@@ -55,6 +57,18 @@ def login():
         else:
             denied = True
             return render_template('login.html', denied=denied)
+    if "register-submit" in request.form and request.method == 'POST':
+        id = genID()
+        first = request.form.get('register-first-name')
+        last = request.form.get('register-last-name')
+        email2 = request.form.get('register-email-address')
+        phone = request.form.get('register-phone-number')
+        passport = request.form.get('register-passport-number')
+        dob = request.form.get('register-date-of-birth')
+        cur = getCursor()
+        cur.execute("insert into airline.passenger(PassengerID, FirstName, LastName, EmailAddress, PhoneNumber, PassportNumber, DateOfBirth, LoyaltyTier) values (%s,%s,%s,%s,%s,%s,%s,%s);",(str(id), first, last, email2, phone, passport, dob, '1',))
+        registration = True
+        return render_template('login.html', registration=registration)
     else:
         return render_template('login.html')
     

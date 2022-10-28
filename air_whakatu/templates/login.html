@@ -37,7 +37,7 @@ Air Whakatū - Login
 
                 <div class="col-lg-6 text-white" style="background-color: rgb(70, 70, 255); border-top-right-radius: 15px; border-bottom-right-radius: 15px;">
                   <div class="p-5">
-                    <form class="needs-validation" novalidate>
+                    <form class="needs-validation" novalidate action="{{ url_for('login')}}" method="POST">
                         <h3 class="fw-normal mb-3">Register</h3>
   
                         <div class="row">
@@ -73,24 +73,12 @@ Air Whakatū - Login
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-5 mb-2 pb-2">
-                                    <div class="form-outline form-white">
-                                        <label class="form-label" for="register-code">Code +</label>
-                                        <input type="number" name="register-code" id="register-code" placeholder="01 / 012" required class="form-control form-control-lg" />
-                                        <div class="invalid-feedback">
-                                            Please enter a valid code.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-7 mb-2 pb-2">
-                                    <div class="form-outline form-white">
-                                        <label class="form-label" for="register-phone-number">Phone Number</label>
-                                        <input type="tel" name="register-phone-number" id="register-phone-number" placeholder="345-6789" pattern="[0-9]{3}-[0-9]{4}" required class="form-control form-control-lg" />
-                                        <div class="invalid-feedback">
-                                            Please enter valid phone number.
-                                        </div>
+                            <div class="row mb-2">
+                                <div class="form-outline form-white">
+                                    <label class="form-label" for="register-phone-number">Phone Number</label>
+                                    <input type="tel" name="register-phone-number" id="register-phone-number" placeholder="(012) 345-6789" pattern="[(][0-9]{3}[)]\s[0-9]{3}-[0-9]{4}" required class="form-control form-control-lg" />
+                                    <div class="invalid-feedback">
+                                        Please enter valid phone number.
                                     </div>
                                 </div>
                             </div>
@@ -111,8 +99,8 @@ Air Whakatū - Login
                                 <div class="col-md-5 mb-2 pb-2">
                                     <div class="mb-2 pb-2">
                                         <div class="form-outline form-white">
-                                            <label class="form-label" for="register-dateofbirth">Date Of Birth</label>
-                                            <input type="date" name="register-dateofbirth" id="register-dateofbirth" required class="form-control form-control-lg" />
+                                            <label class="form-label" for="register-date-of-birth">Date Of Birth</label>
+                                            <input type="date" name="register-date-of-birth" id="register-date-of-birth" required class="form-control form-control-lg" />
                                             <div class="invalid-feedback">
                                                 Please enter a date of birth.
                                             </div>
@@ -121,8 +109,10 @@ Air Whakatū - Login
                                 </div>
                             </div>
                         </div>
-
-                        <button type="button" class="btn btn-light btn-lg"
+                        {% if registration %}
+                            <p class="text-light">Successfully registered.</p>
+                        {% endif %}
+                        <button type="submit" name="register-submit" id="register-submit" class="btn btn-light btn-lg"
                             data-mdb-ripple-color="dark">Register</button>
                     </form>
                     

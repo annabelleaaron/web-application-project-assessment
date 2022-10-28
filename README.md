@@ -27,6 +27,16 @@ render_template: arrivals-departures.html
 ```
 ```
 Route: /login
+Read method: POST
+Return SQL data: "select EmailAddress from airline.passenger where EmailAddress=%s",(email)
+Pass data variables: denied
+render_template: login.html (if email is not registered) | booking.html (if email is registered)
+```
+```
+Route: /login
+Read method: POST
+Insert SQL data: "insert into airline.passenger(PassengerID, FirstName, LastName, EmailAddress, PhoneNumber, PassportNumber, DateOfBirth, LoyaltyTier) values (%s,%s,%s,%s,%s,%s,%s,%s);",(str(id), first, last, email2, phone, passport, dob, '1',)
+Pass data variables: registration
 render_template: login.html
 ```
 
@@ -44,6 +54,7 @@ ___
     - [x] home.html
     - [x] arrivals-departures.html
     - [x] login.html
+    - [x] booking.html
 - [x] static
     - [x] logo_blue.jpg
 - [x] .gitignore | _virtual environment_

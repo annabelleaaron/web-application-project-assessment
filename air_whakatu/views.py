@@ -3,7 +3,10 @@ import mysql.connector
 from . import connect
 import uuid
 from . import app
+from datetime import datetime
 
+global timeNow
+timeNow = '2022-10-28 17:00'
 app.secret_key = 'super secret key'
 
 dbconn = None
@@ -15,7 +18,7 @@ def getCursor():
         connection = mysql.connector.connect(user=connect.dbuser, \
         password=connect.dbpass, host=connect.dbhost, \
         database=connect.dbname, autocommit=True)
-        dbconn = connection.cursor()
+        dbconn = connection.cursor(buffered=True)
         return dbconn
     else:
         return dbconn
@@ -45,13 +48,13 @@ def arrivalsdepartures():
         apcode = cur.fetchone()
         # change tuple to string
         apcode = str(apcode[0])
-        # selects flights between 26 Oct 2022, 5PM and 2 Nov 2022, 5PM for both arrivals and departures
+        # selects flights based on 2 days before timeNow and 5 days after
         # selects arrival time
-        cur.execute("select r.FlightNum, addtime(f.FlightDate,f.ArrTime) as ArrivalTime, ap.AirportName as ArrivingFrom, f.FlightStatus from airline.route as r inner join airline.flight as f on f.FlightNum = r.FlightNum inner join airline.airport as ap on ap.AirportCode = r.DepCode where ap.AirportName != %s and r.ArrCode = %s and addtime(f.FlightDate,f.ArrTime) >= '2022-10-26 17:00' and addtime(f.FlightDate,f.ArrTime) <= '2022-11-2 17:00' order by addtime(f.FlightDate,f.ArrTime);",(apname, apcode,))
+        cur.execute("select r.FlightNum, addtime(f.FlightDate,f.ArrTime) as ArrivalTime, ap.AirportName as ArrivingFrom, f.FlightStatus from airline.route as r inner join airline.flight as f on f.FlightNum = r.FlightNum inner join airline.airport as ap on ap.AirportCode = r.DepCode where ap.AirportName != %s and r.ArrCode = %s and addtime(f.FlightDate,f.ArrTime) >= date_sub(%s, interval 2 day) and addtime(f.FlightDate,f.ArrTime) <= date_add(%s, interval 5 day) order by addtime(f.FlightDate,f.ArrTime);",(apname, apcode, timeNow, timeNow))
         arr_select_result = cur.fetchall()
         arr_column_names = [desc[0] for desc in cur.description]
         # selects departure time
-        cur.execute("select r.FlightNum, addtime(f.FlightDate,f.DepTime) as DepartureTime, ap.AirportName as DepartingTo, f.FlightStatus from airline.route as r inner join airline.flight as f on f.FlightNum = r.FlightNum inner join airline.airport as ap on ap.AirportCode = r.ArrCode where ap.AirportName != %s and r.DepCode = %s and addtime(f.FlightDate,f.DepTime) >= '2022-10-26 17:00' and addtime(f.FlightDate,f.DepTime) <= '2022-11-2 17:00' order by addtime(f.FlightDate,f.ArrTime);",(apname, apcode,))
+        cur.execute("select r.FlightNum, addtime(f.FlightDate,f.DepTime) as DepartureTime, ap.AirportName as DepartingTo, f.FlightStatus from airline.route as r inner join airline.flight as f on f.FlightNum = r.FlightNum inner join airline.airport as ap on ap.AirportCode = r.ArrCode where ap.AirportName != %s and r.DepCode = %s and addtime(f.FlightDate,f.DepTime) >= date_sub(%s, interval 2 day) and addtime(f.FlightDate,f.DepTime) <= date_add(%s, interval 5 day) order by addtime(f.FlightDate,f.ArrTime);",(apname, apcode, timeNow, timeNow,))
         dep_select_result = cur.fetchall()
         dep_column_names = [desc[0] for desc in cur.description]
         return render_template('arrivals-departures.html', apname=apname, arrresult=arr_select_result, arrcols=arr_column_names, depresult=dep_select_result, depcols=dep_column_names)
@@ -100,20 +103,76 @@ def login():
 @app.route("/booking")
 def booking():
     cur = getCursor()
-    # shows the existing bookings of the user on 2022-10-28 17:00 and 7 days after
-    cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from airline.flight as af inner join airline.route as ar on ar.FlightNum = af.FlightNum inner join airline.airport as aa on aa.AirportCode = ar.DepCode inner join airline.airport as aa2 on aa2.AirportCode = ar.ArrCode inner join airline.passengerflight as apf on apf.FlightID = af.FlightID inner join airline.passenger as ap on ap.PassengerID = apf.PassengerID where ap.EmailAddress = %s and addtime(FlightDate,DepTime) >= '2022-10-28 17:00' and addtime(FlightDate,DepTime) <= '2022-11-04 17:00';",(session['username'],))
+    # shows the existing bookings of the user based on timeNow
+    cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from airline.flight as af inner join airline.route as ar on ar.FlightNum = af.FlightNum inner join airline.airport as aa on aa.AirportCode = ar.DepCode inner join airline.airport as aa2 on aa2.AirportCode = ar.ArrCode inner join airline.passengerflight as apf on apf.FlightID = af.FlightID inner join airline.passenger as ap on ap.PassengerID = apf.PassengerID where ap.EmailAddress = %s and addtime(FlightDate,DepTime) >= %s;",(session['username'], timeNow,))
     select_result = cur.fetchall()
     column_names = [desc[0] for desc in cur.description]
     return render_template('booking.html', loggedEmail=session['username'], dbresult=select_result, dbcols=column_names)
 
-@app.route("/booking/add")
+@app.route("/booking/add", methods=('GET', 'POST'))
 def bookingAdd():
-    return render_template('booking-add.html')
+    if "select-flight-submit" in request.form and request.method == 'POST':
+        # get departure airport name from the select tag in booking-add.html
+        apname = request.form.get('departure-airport-name')
+        cur = getCursor()
+        # get departure code based on the departure airport name
+        cur.execute("select r.DepCode from airline.route as r inner join airline.airport as ap on ap.AirportCode = r.DepCode where ap.AirportName = %s;",(apname,))
+        depcode = cur.fetchone()
+        # change tuple to string
+        depcode = str(depcode[0])
+        # get date from the select tag in booking-add.html
+        depdate = request.form.get('date-departure')
+        # get flight ID of flights departing from the departure code and in 7 days of the selected date
+        cur.execute("select FlightID from airline.flight as af inner join airline.route as ar on ar.FlightNum = af.FlightNum where ar.DepCode = %s and af.FlightDate >= %s and af.FlightDate <= date_add(%s, interval 7 day);",(depcode, depdate, depdate,))
+        listOfFlightID = cur.fetchall()
+        # change tuple of integers to list of strings
+        listOfFlightIDs = []
+        for x in listOfFlightID:
+            x = str(x[0])
+            listOfFlightIDs.append(x)
+        # create an empty list to capture all flights
+        listOfFlights = []
+        # loop through listOfFlightID while appending the fetch into the empty list
+        for x in listOfFlightIDs:
+            cur = getCursor()
+            cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime, ac.Seating-NumberOfBookedSits.NumberOfPassengers as NumberOfAvailableSeats from airline.flight as af inner join (select pf.FlightID, count(pf.PassengerID) as NumberOfPassengers from airline.passengerflight as pf where pf.FlightID = %s) as NumberOfBookedSits on af.FlightID = NumberOfBookedSits.FlightID inner join airline.aircraft as ac on ac.RegMark = af.Aircraft inner join airline.route as ar on ar.FlightNum = af.FlightNum inner join airline.airport as aa on aa.AirportCode = ar.ArrCode where ar.DepCode = %s;",(x, depcode,))
+            # fetch the row
+            flightRow = cur.fetchone()
+            # append the row into the empty list
+            listOfFlights.append(flightRow)
+        select_result = listOfFlights
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('booking-add.html', apname=apname, dbresult=select_result, dbcols=column_names)
+    else:
+        return render_template('booking-add.html')
+
+@app.route("/booking/add/confirm", methods=['GET','POST'])
+def bookingConfirm():
+    if "confirm-booking-submit" in request.form and request.method == 'POST':
+        # get flight ID from the form in booking-add.html
+        fid = request.form.get('flight-id')
+        cur = getCursor()
+        # get passenger ID from the user in session
+        cur.execute("select PassengerID from airline.passenger where EmailAddress = %s;",(session['username'],))
+        pid = cur.fetchone()
+        pid = int(pid[0])
+        # add passenger into flight, using insert ignore to avoid error
+        cur.execute("insert ignore into airline.passengerflight(FlightID, PassengerID) values (%s,%s);",(str(fid),str(pid),))
+        return redirect("/booking")
+    else:
+        # get the flight id from booking-add.html
+        id = request.args.get('flightid')
+        cur = getCursor()
+        # get flight details
+        cur.execute("select af.FlightID, af.FlightNum, af.FlightDate, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime from airline.flight as af inner join airline.aircraft as ac on ac.RegMark = af.Aircraft inner join airline.route as ar on ar.FlightNum = af.FlightNum inner join airline.airport as aa on aa.AirportCode = ar.ArrCode where af.FlightID = %s;",(str(id),))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template("booking-add-confirm.html", dbresult=select_result, dbcols=column_names)
 
 @app.route("/booking/cancel", methods=['GET','POST'])
 def bookingCancel():
     if "cancel-booking-submit" in request.form and request.method == 'POST':
-        # get flight ID and passenger ID from the form
+        # get flight ID and passenger ID from the form in booking.cancel-html
         fid = request.form.get('flight-id')
         pid = request.form.get('passenger-id')
         cur = getCursor()

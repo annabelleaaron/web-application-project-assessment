@@ -3,4 +3,84 @@
 Air Whakatū - Book a flight
 {% endblock %}
 {% block content %}
+<form class="needs-validation" action="{{ url_for('bookingAdd')}}" method="POST">
+    <div class="row col-md-12 mb-3">
+        <div class="container col-md-4 mx-0">
+            <label for="departure-airport-name">Select a departure airport</label>
+            <select class="form-select" name="departure-airport-name" id="departure-airport-name" size="1" required>
+                <option selected disabled value="">...</option>
+                <option value="Blenheim Airport">Blenheim Airport</option>
+                <option value="Christchurch Airport">Christchurch Airport</option>
+                <option value="Hokitika Airport">Hokitika Airport</option>
+                <option value="Nelson Airport">Nelson Airport</option>
+                <option value="Picton Aerodrome">Picton Aerodrome</option>
+                <option value="Palmerston North Airport">Palmerston North Airport</option>
+                <option value="Kapiti Coast Airport">Kapiti Coast Airport</option>
+                <option value="Whanganui Airport">Whanganui Airport</option>
+                <option value="Wellington Airport">Wellington Airport</option>
+            </select>
+        </div>
+        <div class="col-md-4 mx-0">
+            <div class="form-outline form-white">
+                <label for="date-departure">Select date</label>
+                <input type="date" name="date-departure" id="date-departure" required class="form-control form-control-md" />
+            </div>
+        </div>
+        <div class="container col-md-2 mx-0 py-4">
+            <input name="select-flight-submit" id="select-flight-submit" type="submit" value="Select" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
+        </div>
+    </div>
+
+    {% if apname %}
+        <h2 class="mb-3">{{apname}}</h2>
+    {% endif %}
+
+    {% if dbresult %}
+    <div class="row">
+        <h5>Your current booked flights</h5>
+        <p>Select a flight number to proceed with your booking</p>
+        <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>{{dbcols[1]}}</th><th>{{dbcols[2]}}</th><th>{{dbcols[3]}}</th><th>{{dbcols[4]}}</th><th>{{dbcols[5]}}</th>
+            </tr>
+        </thead>
+        {# this is a comment the line below prints the db result #}
+        <tbody>
+        {% for result in dbresult %}
+        <tr>
+            <td><a href="/booking/add/confirm?flightid={{result[0]}}">{{result[1]}}</a></td><td>{{result[2]}}</td><td>{{result[3]}}</td><td>{{result[4]}}</td><td>{{result[5]}}</td>
+        {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+</form>
+
+
+<a href="{{url_for('booking')}}" class="btn btn-light btn-md" data-mdb-ripple-color="dark">Back</a>
+
+<!--Script for disabling form submissions if there are invalid fields-->
+<script>
+    (function () {
+        'use strict'
+  
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('.needs-validation')
+  
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+                }
+  
+                form.classList.add('was-validated')
+            }, false)
+            })
+    })()
+</script>
 {% endblock %}

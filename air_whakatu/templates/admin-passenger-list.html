@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block title %}
+Admin - Passenger List
+{% endblock %}
+{% block content %}
+<form class="needs-validation" action="{{ url_for('adminPassengerList')}}" method="POST">
+    <div class="row col-md-12 mb-3">
+        <div class="container col-md-4 mx-0">
+            <div class="form-outline">
+                <label class="form-label" for="passenger-last-name"></label>
+                <input type="text" name="passenger-last-name" id="passenger-last-name" placeholder="Smith" required class="form-control form-control-md" />
+            </div>
+        </div>
+        <div class="container col-md-2 mx-0 py-4">
+            <input name="search-last-name-submit" id="search-last-name-submit" type="submit" value="Search" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
+        </div>
+    </div>
+
+    <table class="table table-hover">
+        <thead>
+          <tr>
+              <th>{{dbcols[1]}}</th><th>{{dbcols[2]}}</th><th>{{dbcols[3]}}</th><th>{{dbcols[4]}}</th><th>{{dbcols[5]}}</th>
+          </tr>
+        </thead>
+      {# this is a comment the line below prints the db result #}
+        <tbody>
+        {% for result in dbresult %}
+        <tr>
+          <td><a href="/admin/passenger/details?passengerid={{result[0]}}">{{result[1]}}</a></td><td>{{result[2]}}</td><td>{{result[3]}}</td><td>{{result[4]}}</td><td>{{result[5]}}</td>
+        {% endfor %}
+        </tbody>
+      </table>
+</form>
+
+<!--Script for disabling form submissions if there are invalid fields-->
+<script>
+    (function () {
+        'use strict'
+  
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('.needs-validation')
+  
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+                }
+  
+                form.classList.add('was-validated')
+            }, false)
+            })
+    })()
+</script>
+{% endblock %}

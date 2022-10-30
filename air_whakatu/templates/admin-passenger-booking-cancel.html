@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block title %}
+Admin - Cancel Passenger Booking
+{% endblock %}
+{% block content %}
+<form action="{{ url_for('adminPassengerBookingCancel')}}" method="POST" class="row">
+    <h5>Cancel Passenger Booking</h5>
+    <table class="table table-hover">
+        <thead>
+          <tr>
+              <th>{{dbcols[2]}}</th><th>{{dbcols[3]}}</th><th>{{dbcols[4]}}</th><th>{{dbcols[5]}}</th><th>{{dbcols[6]}}</th>
+          </tr>
+        </thead>
+      {# this is a comment the line below prints the db result #}
+        <tbody>
+        {% for result in dbresult %}
+        <tr>
+            <input type="hidden" name="flight-id" id="flight-id" value="{{result[0]}}" />
+            <input type="hidden" name="passenger-id" id="passenger-id" value="{{result[1]}}" />
+            <td>{{result[2]}}</td><td>{{result[3]}}</td><td>{{result[4]}}</td><td>{{result[5]}}</td><td>{{result[6]}}</td>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="row col-md-3">
+        <button type="submit" name="admin-cancel-booking-submit" id="admin-cancel-booking-submit" class="btn btn-light btn-lg" data-mdb-ripple-color="dark">Confirm cancellation</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% block title %}
-Air Whakatū - Book a flight
+Admin - Flights List
 {% endblock %}
 {% block content %}
-<form class="needs-validation" action="{{ url_for('bookingAdd')}}" method="POST">
+<form class="needs-validation" action="{{ url_for('adminPassengerBooking')}}" method="POST">
     <div class="row col-md-12 mb-3">
         <div class="container col-md-4 mx-0">
             <label for="departure-airport-name">Select a departure airport</label>
@@ -27,18 +27,20 @@ Air Whakatū - Book a flight
             </div>
         </div>
         <div class="container col-md-2 mx-0 py-4">
-            <input name="select-flight-submit" id="select-flight-submit" type="submit" value="Select" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
+            <input name="admin-select-flight-submit" id="admin-select-flight-submit" type="submit" value="Select" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
         </div>
     </div>
 
     {% if apname %}
         <h2 class="mb-3">{{apname}}</h2>
     {% endif %}
+    {% if allflights %}
+        <h2 class="mb-3">Flights</h2>
+    {% endif %}
 
     {% if dbresult %}
     <div class="row">
-        <h5>Book a flight</h5>
-        <p>Select a flight number to proceed with your booking</p>
+        <p>Select a flight number to display the flight's manifest</p>
         <table class="table table-hover">
         <thead>
             <tr>
@@ -49,7 +51,7 @@ Air Whakatū - Book a flight
         <tbody>
         {% for result in dbresult %}
         <tr>
-            <td><a href="/booking/add/confirm?flightid={{result[0]}}">{{result[1]}}</a></td><td>{{result[2]}}</td><td>{{result[3]}}</td><td>{{result[4]}}</td><td>{{result[5]}}</td>
+            <td><a href="/admin/flights/manifest?flightid={{result[0]}}">{{result[1]}}</a></td><td>{{result[2]}}</td><td>{{result[3]}}</td><td>{{result[4]}}</td><td>{{result[5]}}</td>
         {% endfor %}
         </tbody>
         </table>
@@ -57,9 +59,6 @@ Air Whakatū - Book a flight
     {% endif %}
 
 </form>
-
-
-<a href="{{url_for('booking')}}" class="btn btn-light btn-md" data-mdb-ripple-color="dark">Back</a>
 
 <!--Script for disabling form submissions if there are invalid fields-->
 <script>

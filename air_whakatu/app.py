@@ -12,7 +12,6 @@ global timeNow
 timeNow = '2022-10-28 17:00'
 app.secret_key = 'super secret key'
 
-
 def getCursor():
     global dbconn
     global connection
@@ -101,7 +100,8 @@ def login():
         return render_template('login.html', registration=registration)
     else:
         return render_template('login.html')
-    
+
+#leads to the page where user successfully logged in and is in session
 @app.route("/booking")
 def booking():
     cur = getCursor()
@@ -111,6 +111,7 @@ def booking():
     column_names = [desc[0] for desc in cur.description]
     return render_template('booking.html', loggedEmail=session['username'], dbresult=select_result, dbcols=column_names)
 
+# leads to the page where the user can choose which flight to book
 @app.route("/booking/add", methods=('GET', 'POST'))
 def bookingAdd():
     if "select-flight-submit" in request.form and request.method == 'POST':
@@ -148,6 +149,7 @@ def bookingAdd():
     else:
         return render_template('booking-add.html')
 
+# leads to the page where the user can confirm if they want to book the flight that they chose
 @app.route("/booking/add/confirm", methods=['GET','POST'])
 def bookingConfirm():
     if "confirm-booking-submit" in request.form and request.method == 'POST':
@@ -171,10 +173,11 @@ def bookingConfirm():
         column_names = [desc[0] for desc in cur.description]
         return render_template("booking-add-confirm.html", dbresult=select_result, dbcols=column_names)
 
+# leads to the page where the user can cancel one of their existing bookings that they chose in booking.html
 @app.route("/booking/cancel", methods=['GET','POST'])
 def bookingCancel():
     if "cancel-booking-submit" in request.form and request.method == 'POST':
-        # get flight ID and passenger ID from the form in booking.cancel-html
+        # get flight ID and passenger ID from the form in booking-cancel.html
         fid = request.form.get('flight-id')
         pid = request.form.get('passenger-id')
         cur = getCursor()
@@ -191,6 +194,7 @@ def bookingCancel():
         column_names = [desc[0] for desc in cur.description]
         return render_template("booking-cancel.html", dbresult=select_result, dbcols=column_names)
 
+# leads to the page where the user can edit their details
 @app.route("/booking/passenger", methods=['GET','POST'])
 def passengerUpdate():
     # updated variable for when user has successfully updated their details
@@ -223,9 +227,206 @@ def passengerUpdate():
             select_result = cur.fetchone()
             return render_template('booking-passenger.html',customerdetails = select_result)
 
+# ends the session
 @app.route("/logout")
 def logout():
     # removes the current user from the session and directs them to login.html
     session.pop('loggedin', None)
     session.pop('username', None)
     return redirect(url_for('login'))
+
+# admin home page
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    cur = getCursor()
+    cur.execute("select StaffID, IsManager, CONCAT(FirstName,' ',LastName) as Name from staff;")
+    select_result = cur.fetchall()
+    column_names = [desc[0] for desc in cur.description]
+    return render_template("admin-home.html", dbresult=select_result, dbcols=column_names)
+
+# admin logged in
+@app.route('/admin/login')
+def adminLogin():
+    adminId = request.args.get('adminid')
+    cur = getCursor()
+    cur.execute("select IsManager from staff where StaffID = %s;",(adminId,))
+    isManager = cur.fetchone()
+    isManager = str(isManager[0])
+    cur.execute("select CONCAT(FirstName,' ',LastName) as Name from staff where StaffID = %s;",(adminId,))
+    adminName = cur.fetchone()
+    adminName = str(adminName[0])
+    session['adminloggedin'] = True
+    session['adminuserid'] = adminId
+    session['adminmanager'] = isManager
+    session['adminname'] = adminName
+    return render_template('admin-login.html')
+
+# admin able to view list of passengers
+@app.route('/admin/passenger', methods=['GET','POST'])
+def adminPassengerList():
+    if "search-last-name-submit" in request.form and request.method == 'POST':
+        lastName = request.form.get('passenger-last-name')
+        cur = getCursor()
+        cur.execute("select * from passenger where LastName = %s;",(lastName,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-list.html', dbresult=select_result, dbcols=column_names)
+    else:
+        cur = getCursor()
+        cur.execute("select PassengerID, CONCAT(FirstName,' ',LastName) as Name, EmailAddress, PhoneNumber, PassportNumber, DateOfBirth from passenger;")
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-list.html', dbresult=select_result, dbcols=column_names)
+
+@app.route('/admin/passenger/details', methods=['GET','POST'])
+def adminPassengerDetails():
+    # updated variable for when user has successfully updated their details
+    updated = False
+    if "admin-update-submit" in request.form and request.method == 'POST':
+        updated = True
+        id = request.form.get('passenger-id')
+        first = request.form.get('update-first-name')
+        last = request.form.get('update-last-name')
+        email = request.form.get('update-email-address')
+        phone = request.form.get('update-phone-number')
+        passport = request.form.get('update-passport-number')
+        dob = request.form.get('update-date-of-birth')
+        cur = getCursor()
+        cur.execute("update  passenger set FirstName=%s, LastName=%s, EmailAddress=%s, PhoneNumber=%s, PassportNumber=%s, DateOfBirth=%s where PassengerID=%s;",(first, last, email, phone, passport, dob, id,))
+        # get passenger details based on passenger ID
+        cur.execute("select * from  passenger where PassengerID=%s",(session['adminpassenger'],))
+        select_passengerid = cur.fetchone()
+        # shows the existing bookings of the user based on timeNow
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-details.html', updated=updated, customerdetails=select_passengerid, dbresult=select_result, dbcols=column_names)
+    else:
+        pid = request.args.get("passengerid")
+        session['adminpassenger'] = pid
+        cur = getCursor()
+        # get passenger details based on passenger ID
+        cur.execute("select * from  passenger where PassengerID=%s",(session['adminpassenger'],))
+        select_passengerid = cur.fetchone()
+        # shows the existing bookings of the user based on timeNow
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-details.html', customerdetails=select_passengerid, dbresult=select_result, dbcols=column_names)
+
+@app.route('/admin/passenger/booking/cancel', methods=['GET','POST'])
+def adminPassengerBookingCancel():
+    if "admin-cancel-booking-submit" in request.form and request.method == 'POST':
+        # get flight ID from the form in admin-passenger-booking-cancel.html
+        fid = request.form.get('flight-id')
+        cur = getCursor()
+        # deletes the row based on flight ID and passenger ID
+        cur.execute("delete from   passengerFlight where PassengerID=%s and FlightID=%s;",(session['adminpassenger'],str(fid),))
+        # get the passenger details
+        cur.execute("select * from  passenger where PassengerID=%s;",(session['adminpassenger'],))
+        select_passengerid = cur.fetchone()
+        # shows the existing bookings of the user based on timeNow
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-details.html', customerdetails=select_passengerid, dbresult=select_result, dbcols=column_names)
+    else:
+        # get flight id from admin-passenger-details.html
+        id = request.args.get('flightid')
+        cur = getCursor()
+        # get flight details
+        cur.execute("select af.FlightID, ap.PassengerID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and apf.FlightID = %s;",(session['adminpassenger'], str(id),))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-booking-cancel.html', dbresult=select_result, dbcols=column_names)
+
+@app.route('/admin/passenger/booking', methods=['GET','POST'])
+def adminPassengerBooking():
+    if "admin-select-flight-submit" in request.form and request.method == 'POST':
+        # get departure airport name from the select tag in admin-passenger-booking.html
+        apname = request.form.get('departure-airport-name')
+        cur = getCursor()
+        # get departure code based on the departure airport name
+        cur.execute("select r.DepCode from  route as r inner join  airport as ap on ap.AirportCode = r.DepCode where ap.AirportName = %s;",(apname,))
+        depcode = cur.fetchone()
+        # change tuple to string
+        depcode = str(depcode[0])
+        # get date from the select tag in admin-passenger-booking.html
+        depdate = request.form.get('date-departure')
+        # get flight ID of flights departing from the departure code and in 7 days of the selected date
+        cur.execute("select FlightID from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum where ar.DepCode = %s and af.FlightDate >= %s and af.FlightDate <= date_add(%s, interval 7 day);",(depcode, depdate, depdate,))
+        listOfFlightID = cur.fetchall()
+        # change tuple of integers to list of strings
+        listOfFlightIDs = []
+        for x in listOfFlightID:
+            x = str(x[0])
+            listOfFlightIDs.append(x)
+        # create an empty list to capture all flights
+        listOfFlights = []
+        # loop through listOfFlightID while appending the fetch into the empty list
+        for x in listOfFlightIDs:
+            cur = getCursor()
+            cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime, ac.Seating-NumberOfBookedSits.NumberOfPassengers as NumberOfAvailableSeats from  flight as af inner join (select pf.FlightID, count(pf.PassengerID) as NumberOfPassengers from   passengerFlight as pf where pf.FlightID = %s) as NumberOfBookedSits on af.FlightID = NumberOfBookedSits.FlightID inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode where ar.DepCode = %s;",(x, depcode,))
+            # fetch the row
+            flightRow = cur.fetchone()
+            # append the row into the empty list
+            listOfFlights.append(flightRow)
+        select_result = listOfFlights
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-booking.html', apname=apname, dbresult=select_result, dbcols=column_names)
+    else:
+        return render_template('admin-passenger-booking.html')
+
+@app.route('/admin/passenger/booking/confirm', methods=['GET','POST'])
+def adminPassengerBookingConfirm():
+    if "admin-confirm-booking-submit" in request.form and request.method == 'POST':
+        # get flight ID from the form in admin-passenger-booking.html
+        fid = request.form.get('flight-id')
+        cur = getCursor()
+        # add passenger into flight, using insert ignore to avoid error
+        cur.execute("insert ignore into   passengerFlight(FlightID, PassengerID) values (%s,%s);",(str(fid),session['adminpassenger'],))
+        # get the passenger details
+        cur.execute("select * from  passenger where PassengerID=%s;",(session['adminpassenger'],))
+        select_passengerid = cur.fetchone()
+        # shows the existing bookings of the user based on timeNow
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-details.html', customerdetails=select_passengerid, dbresult=select_result, dbcols=column_names)
+    else:
+        # get the flight id from admin-passenger-booking.html
+        id = request.args.get('flightid')
+        cur = getCursor()
+        # get flight details
+        cur.execute("select af.FlightID, af.FlightNum, af.FlightDate, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode where af.FlightID = %s;",(str(id),))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-passenger-booking-confirm.html', dbresult=select_result, dbcols=column_names)
+
+@app.route('/admin/flights', methods = ['GET','POST'])
+def adminFlightsList():
+    allflights = True
+    allflights = False
+    cur = getCursor()
+    cur.execute("select FlightID from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum where af.FlightDate >= %s and af.FlightDate <= date_add(%s, interval 7 day);",(timeNow, timeNow,))
+    listOfFlightID = cur.fetchall()
+    listOfFlightIDs = []
+    for x in listOfFlightID:
+        x = str(x[0])
+        listOfFlightIDs.append(x)
+    listOfFlights = []
+    for x in listOfFlightIDs:
+        cur = getCursor()
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime, ac.Seating-NumberOfBookedSits.NumberOfPassengers as NumberOfAvailableSeats from  flight as af inner join (select pf.FlightID, count(pf.PassengerID) as NumberOfPassengers from   passengerFlight as pf where pf.FlightID = %s) as NumberOfBookedSits on af.FlightID = NumberOfBookedSits.FlightID inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode;",(x,))
+        # fetch the row
+        flightRow = cur.fetchone()
+        # append the row into the empty list
+        listOfFlights.append(flightRow)
+    select_result = listOfFlights
+    column_names = [desc[0] for desc in cur.description]
+    return render_template('admin-passenger-booking.html', allflights=allflights, dbresult=select_result, dbcols=column_names)
+    return render_template('admin-flights-list.html')
+
+@app.route('/admin/flights/manifest')
+def adminFlightsManifest():
+    return render_template('admin-flights-manifest.html')

@@ -1,5 +1,6 @@
 ## Project Summary
 
+
 * To reinstall the packages used in the environment:
 ```pip install -r requirements.txt```
 
@@ -117,15 +118,108 @@ method: POST
 sql: "delete from  passengerflight where PassengerID=%s and FlightID=%s;",(str(pid),str(fid),)
 render_template: booking.html
 ```
+* A list of staff names are displayed where they can click their name to login
+```
+route: /admin
+method: GET
+sql: "select StaffID, IsManager, CONCAT(FirstName,' ',LastName) as Name from staff;"
+variables: dbresult, dbcols
+render_template: admin-home.html
+```
+* When the staff logs in, there are two links in admin-login.html. 'Passenger List' links to admin-passenger-list.html, showing the list of passengers while 'Flights List' links to admin-flights-list.html, showing the list of flights
+```
+route: /admin/login
+render_template: admin-login.html
+```
+* Clicking into 'Passenger List' displays all registered passengers. The staff can search passengers by their last name
+```
+route: /admin/passenger
+method: GET
+sql: "select PassengerID, CONCAT(FirstName,' ',LastName) as Name, EmailAddress, PhoneNumber, PassportNumber, DateOfBirth from passenger;"
+variables: dbresult, dbcols
+render_template: admin-passenger-list.html
+```
+```
+route: /admin/passenger
+method: POST
+sql: "select * from passenger where LastName = %s;",(lastName,)
+variables: dbresult, dbcols
+render_template: admin-passenger-list.html
+```
+* Clicking a passenger's name will lead the staff to the selected passenger's details regarding their information and existing bookings. In this template, the staff can edit the passenger's information. Otherwise, the staff can click a flight number from the passenger's existing bookings to cancel it, or click the 'Add Booking' button to add a flight booking for the passenger
+```
+route: /admin/passenger/details
+method: GET
+sql: "select * from  passenger where PassengerID=%s",(session['adminpassenger'],)
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,)
+variables: customerdetails, dbresult, dbcols
+render_template: admin-passenger-details.html
+```
+```
+route: /admin/passenger/details
+method: POST
+sql: "update  passenger set FirstName=%s, LastName=%s, EmailAddress=%s, PhoneNumber=%s, PassportNumber=%s, DateOfBirth=%s where PassengerID=%s;",(first, last, email, phone, passport, dob, id,)
+sql: "select * from  passenger where PassengerID=%s",(session['adminpassenger'],)
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,)
+variables: updated, customerdetails, dbresult, dbcols
+render_template: admin-passenger-details.html
+```
+* Clicking on any flight number from the passenger's existing bookings in admin-passenger-details.html will display the selected flight and a 'Confirm cancellation' button
+```
+route: /admin/passenger/booking/cancel
+method: GET
+sql: "select af.FlightID, ap.PassengerID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and apf.FlightID = %s;",(session['adminpassenger'], str(id),)
+variables: dbresult, dbcols
+render_template: admin-passenger-booking-cancel.html
+```
+```
+route: /admin/passenger/booking/cancel
+method: POST
+sql: "delete from   passengerFlight where PassengerID=%s and FlightID=%s;",(session['adminpassenger'],str(fid),)
+sql: "select * from  passenger where PassengerID=%s;",(session['adminpassenger'],)
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,)
+variables: customerdetails, dbresult, dbcols
+render_template: admin-passenger-details.html
+```
+* Clicking on the 'Add Booking' button in admin-passenger-details.html will display a dropdown box to choose the departure airport and a date selector box. 
+```
+route: /admin/passenger/booking
+render_template: admin-passenger-booking.html
+```
+```
+route: /admin/passenger/booking
+method: POST
+sql: "select r.DepCode from  route as r inner join  airport as ap on ap.AirportCode = r.DepCode where ap.AirportName = %s;",(apname,)
+sql: "select FlightID from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum where ar.DepCode = %s and af.FlightDate >= %s and af.FlightDate <= date_add(%s, interval 7 day);",(depcode, depdate, depdate,)
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime, ac.Seating-NumberOfBookedSits.NumberOfPassengers as NumberOfAvailableSeats from  flight as af inner join (select pf.FlightID, count(pf.PassengerID) as NumberOfPassengers from   passengerFlight as pf where pf.FlightID = %s) as NumberOfBookedSits on af.FlightID = NumberOfBookedSits.FlightID inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode where ar.DepCode = %s;",(x, depcode,)
+variables: apname, dbresult, dbcols
+render_template: admin-passenger-booking.html
+```
+* Selecting a flight number from the list of flights displayed in admin-passenger-booking.html after inputting the departure airport and date will send the staff to admin-passenger-booking-confirm.html where they can confirm the booking for the passenger
+```
+route:
+method: GET
+sql: "select af.FlightID, af.FlightNum, af.FlightDate, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode where af.FlightID = %s;",(str(id),)
+variables: dbresult, dbcols
+render_template: admin-passenger-booking-confirm.html
+```
+```
+route:
+method: POST
+sql: "insert ignore into   passengerFlight(FlightID, PassengerID) values (%s,%s);",(str(fid),session['adminpassenger'],)
+sql: "select * from  passenger where PassengerID=%s;",(session['adminpassenger'],)
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom,addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.DepCode inner join  airport as aa2 on aa2.AirportCode = ar.ArrCode inner join   passengerFlight as apf on apf.FlightID = af.FlightID inner join  passenger as ap on ap.PassengerID = apf.PassengerID where ap.PassengerID = %s and addtime(FlightDate,DepTime) >= %s;",(session['adminpassenger'], timeNow,)
+variables: customerdetails, dbresult, dbcols
+render_template: admin-passenger-details.html
+```
+
 
 ___
 
 
 ### Files
 - [x] air_whakatu
-    - [x] views.py
-    - [x] __init__.py
-    - [x] webapp.py
+    - [x] app.py
     - [x] connect.py
 - [x] templates
     - [x] layout.html
@@ -137,9 +231,16 @@ ___
     - [x] booking-cancel.html
     - [x] booking-add.html
     - [x] booking-add-confirm.html
+    - [x] admin-home.html
+    - [x] admin-login.html
+    - [x] admin-passenger-list.html
+    - [x] admin-passenger-details.html
+    - [x] admin-passenger-booking-cancel.html
+    - [x] admin-passenger-booking.html
+    - [x] admin-passenger-booking-confirm.html
 - [x] static
     - [x] logo_blue.jpg
 - [x] .gitignore | _virtual environment_
 - [x] requirements.txt
-- [ ] Extract of database from MySQL
+- [x] Extract of database from MySQL | PythonAnywhere
 

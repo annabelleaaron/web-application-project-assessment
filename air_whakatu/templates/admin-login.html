@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block title %}
+Admin - Logged in
+{% endblock %}
+{% block content %}
+<div class="row">
+    <h6>Logged in as {{session.adminname}}</h6>
+</div>
+<a href="{{ url_for('adminPassengerList')}}">Passenger List</a> <br>
+<a href="{{ url_for('adminFlightsList')}}">Flights List</a>
+{% endblock %}

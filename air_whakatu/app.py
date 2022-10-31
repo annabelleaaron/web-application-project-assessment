@@ -1,3 +1,4 @@
+from turtle import update
 from flask import Flask, render_template, url_for, request, redirect, session
 import mysql.connector
 import connect
@@ -278,6 +279,7 @@ def adminPassengerList():
         column_names = [desc[0] for desc in cur.description]
         return render_template('admin-passenger-list.html', dbresult=select_result, dbcols=column_names)
 
+# when admin clicks on the name of a passenger, the passenger's details will be displayed
 @app.route('/admin/passenger/details', methods=['GET','POST'])
 def adminPassengerDetails():
     # updated variable for when user has successfully updated their details
@@ -314,6 +316,7 @@ def adminPassengerDetails():
         column_names = [desc[0] for desc in cur.description]
         return render_template('admin-passenger-details.html', customerdetails=select_passengerid, dbresult=select_result, dbcols=column_names)
 
+# in the passenger's details, part of the existing bookings, the admin can access the booking cancellation when they click on the flight number
 @app.route('/admin/passenger/booking/cancel', methods=['GET','POST'])
 def adminPassengerBookingCancel():
     if "admin-cancel-booking-submit" in request.form and request.method == 'POST':
@@ -340,6 +343,7 @@ def adminPassengerBookingCancel():
         column_names = [desc[0] for desc in cur.description]
         return render_template('admin-passenger-booking-cancel.html', dbresult=select_result, dbcols=column_names)
 
+# admin can book flights for the passenger by clicking the 'Add Booking' button in admin-passenger-details.html
 @app.route('/admin/passenger/booking', methods=['GET','POST'])
 def adminPassengerBooking():
     if "admin-select-flight-submit" in request.form and request.method == 'POST':
@@ -377,6 +381,7 @@ def adminPassengerBooking():
     else:
         return render_template('admin-passenger-booking.html')
 
+# admin needs to click the 'Confirm booking' button in admin-passenger-booking-confirm.html before the flight booking is inserted into the database
 @app.route('/admin/passenger/booking/confirm', methods=['GET','POST'])
 def adminPassengerBookingConfirm():
     if "admin-confirm-booking-submit" in request.form and request.method == 'POST':
@@ -403,29 +408,36 @@ def adminPassengerBookingConfirm():
         column_names = [desc[0] for desc in cur.description]
         return render_template('admin-passenger-booking-confirm.html', dbresult=select_result, dbcols=column_names)
 
+# admin is able to view a list of flights
 @app.route('/admin/flights', methods = ['GET','POST'])
 def adminFlightsList():
-    allflights = True
-    allflights = False
-    cur = getCursor()
-    cur.execute("select FlightID from  flight as af inner join  route as ar on ar.FlightNum = af.FlightNum where af.FlightDate >= %s and af.FlightDate <= date_add(%s, interval 7 day);",(timeNow, timeNow,))
-    listOfFlightID = cur.fetchall()
-    listOfFlightIDs = []
-    for x in listOfFlightID:
-        x = str(x[0])
-        listOfFlightIDs.append(x)
-    listOfFlights = []
-    for x in listOfFlightIDs:
+    updated = False
+    # when the manager clicks the 'Add Flights' button
+    if "admin-add-flights-submit" in request.form and request.method == 'POST':
+        updated = True
         cur = getCursor()
-        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime, ac.Seating-NumberOfBookedSits.NumberOfPassengers as NumberOfAvailableSeats from  flight as af inner join (select pf.FlightID, count(pf.PassengerID) as NumberOfPassengers from   passengerFlight as pf where pf.FlightID = %s) as NumberOfBookedSits on af.FlightID = NumberOfBookedSits.FlightID inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode;",(x,))
-        # fetch the row
-        flightRow = cur.fetchone()
-        # append the row into the empty list
-        listOfFlights.append(flightRow)
-    select_result = listOfFlights
-    column_names = [desc[0] for desc in cur.description]
-    return render_template('admin-passenger-booking.html', allflights=allflights, dbresult=select_result, dbcols=column_names)
-    return render_template('admin-flights-list.html')
+        cur.execute("INSERT INTO flight(FlightNum, WeekNum, FlightDate, DepTime, ArrTime, Duration, DepEstAct, ArrEstAct, FlightStatus, Aircraft) SELECT FlightNum, WeekNum+1, date_add(FlightDate, interval 7 day), DepTime, ArrTime, Duration, DepTime, ArrTime, 'On time', Aircraft FROM flight WHERE WeekNum = (SELECT MAX(WeekNum) FROM flight);")
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where addtime(FlightDate,DepTime) >= %s and addtime(FlightDate,DepTime) <= date_add(%s, interval 7 day) order by FlightDate;",(timeNow, timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-flights-list.html', manager=session['adminmanager'], updated=updated, dbresult=select_result, dbcols=column_names)
+    # when the staff clicks the 'Select' button
+    if "admin-select-flight-list-submit" in request.form and request.method == 'POST':
+        apname = request.form.get('departure-airport-name')
+        depdate = request.form.get('date-departure')
+        cur = getCursor()
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where aa.AirportName = %s and FlightDate >= %s and FlightDate <= date_add(%s, interval 7 day) order by FlightDate;",(apname, depdate, depdate,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        # refer to booking-add.html
+        return render_template('admin-flights-list.html', manager=session['adminmanager'], dbresult=select_result, dbcols=column_names)
+    # shows a list of flights based on timeNow and 7 days after
+    else:
+        cur = getCursor()
+        cur.execute("select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where addtime(FlightDate,DepTime) >= %s and addtime(FlightDate,DepTime) <= date_add(%s, interval 7 day) order by FlightDate;",(timeNow, timeNow,))
+        select_result = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return render_template('admin-flights-list.html', manager=session['adminmanager'], dbresult=select_result, dbcols=column_names)
 
 @app.route('/admin/flights/manifest')
 def adminFlightsManifest():

@@ -3,7 +3,7 @@
 Admin - Flights List
 {% endblock %}
 {% block content %}
-<form class="needs-validation" action="{{ url_for('adminPassengerBooking')}}" method="POST">
+<form class="needs-validation" action="{{ url_for('adminFlightsList')}}" method="POST">
     <div class="row col-md-12 mb-3">
         <div class="container col-md-4 mx-0">
             <label for="departure-airport-name">Select a departure airport</label>
@@ -20,27 +20,37 @@ Admin - Flights List
                 <option value="Wellington Airport">Wellington Airport</option>
             </select>
         </div>
-        <div class="col-md-4 mx-0">
+        <div class="col-md-2 mx-0">
             <div class="form-outline form-white">
                 <label for="date-departure">Select date</label>
                 <input type="date" name="date-departure" id="date-departure" required class="form-control form-control-md" />
             </div>
         </div>
         <div class="container col-md-2 mx-0 py-4">
-            <input name="admin-select-flight-submit" id="admin-select-flight-submit" type="submit" value="Select" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
+            <input name="admin-select-flight-list-submit" id="admin-select-flight-list-submit" type="submit" value="Select" class="btn btn-light btn-md" data-mdb-ripple-color="dark"/>
         </div>
     </div>
+</form>
 
-    {% if apname %}
-        <h2 class="mb-3">{{apname}}</h2>
-    {% endif %}
-    {% if allflights %}
-        <h2 class="mb-3">Flights</h2>
-    {% endif %}
+
+{% if manager == '1' %}
+<form action="{{ url_for('adminFlightsList')}}" method="POST">
+    <div class="row">
+        <div class="container col-md-3 mx-0 pb-4">
+            <input name="admin-add-flights-submit" id="admin-add-flights-submit" type="submit" value="Add flights" class="btn btn-secondary btn-md" data-mdb-ripple-color="dark"/>
+            {% if updated %}
+            <div class="text-success">
+                Successfully added flights.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endif %}
 
     {% if dbresult %}
     <div class="row">
-        <p>Select a flight number to display the flight's manifest</p>
+        <h5>Flights</h5>
         <table class="table table-hover">
         <thead>
             <tr>
@@ -57,8 +67,6 @@ Admin - Flights List
         </table>
     </div>
     {% endif %}
-
-</form>
 
 <!--Script for disabling form submissions if there are invalid fields-->
 <script>

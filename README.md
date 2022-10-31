@@ -197,14 +197,14 @@ render_template: admin-passenger-booking.html
 ```
 * Selecting a flight number from the list of flights displayed in admin-passenger-booking.html after inputting the departure airport and date will send the staff to admin-passenger-booking-confirm.html where they can confirm the booking for the passenger
 ```
-route:
+route: /admin/passenger/booking/confirm
 method: GET
 sql: "select af.FlightID, af.FlightNum, af.FlightDate, (select aa.AirportName where aa.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,DepTime) as DepartureTime, addtime(FlightDate,ArrTime) as ArrivalTime from  flight as af inner join  aircraft as ac on ac.RegMark = af.Aircraft inner join  route as ar on ar.FlightNum = af.FlightNum inner join  airport as aa on aa.AirportCode = ar.ArrCode where af.FlightID = %s;",(str(id),)
 variables: dbresult, dbcols
 render_template: admin-passenger-booking-confirm.html
 ```
 ```
-route:
+route: /admin/passenger/booking/confirm
 method: POST
 sql: "insert ignore into   passengerFlight(FlightID, PassengerID) values (%s,%s);",(str(fid),session['adminpassenger'],)
 sql: "select * from  passenger where PassengerID=%s;",(session['adminpassenger'],)
@@ -212,7 +212,29 @@ sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportC
 variables: customerdetails, dbresult, dbcols
 render_template: admin-passenger-details.html
 ```
-
+* Clicking the 'Flights List' link in admin-login.html will direct the staff to admin-flights-list.html where a list of flights is displayed according to the timeNow variable. The list displays flights from the start of timeNow to 7 days after. There is also a dropdown box and data selection box where the staff can choose the departure airport and date of departure. Clicking the 'Select' button will display the list of flights according to the criteria chosen from both boxes. An 'Add Flights' button can only be viewed by a staff who is a manager where they can add flights for following week.
+```
+route: /admin/flights
+method: GET
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where addtime(FlightDate,DepTime) >= %s and addtime(FlightDate,DepTime) <= date_add(%s, interval 7 day) order by FlightDate;",(timeNow, timeNow,)
+variables: manager, dbresult, dbcols
+render_template: admin-flights-list.html
+```
+```
+route: /admin/flights
+method: POST
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where aa.AirportName = %s and FlightDate >= %s and FlightDate <= date_add(%s, interval 7 day) order by FlightDate;",(apname, depdate, depdate,)
+variables: manager, dbresult, dbcols
+render_template: admin-flights-list.html
+```
+```
+route: /admin/flights
+method: POST
+sql: "INSERT INTO flight(FlightNum, WeekNum, FlightDate, DepTime, ArrTime, Duration, DepEstAct, ArrEstAct, FlightStatus, Aircraft) SELECT FlightNum, WeekNum+1, date_add(FlightDate, interval 7 day), DepTime, ArrTime, Duration, DepTime, ArrTime, 'On time', Aircraft FROM flight WHERE WeekNum = (SELECT MAX(WeekNum) FROM flight);"
+sql: "select af.FlightID, af.FlightNum, (select aa.AirportName where aa.AirportCode = ar.DepCode) as DepartingFrom, addtime(FlightDate,DepTime) as DepartureTime, (select aa2.AirportName where aa2.AirportCode = ar.ArrCode) as DepartingTo, addtime(FlightDate,ArrTime) as ArrivalTime from flight as af inner join route as ar on af.FlightNum = ar.FlightNum inner join airport as aa on aa.AirportCode = ar.DepCode inner join airport as aa2 on aa2.AirportCode = ar.ArrCode where addtime(FlightDate,DepTime) >= %s and addtime(FlightDate,DepTime) <= date_add(%s, interval 7 day) order by FlightDate;",(timeNow, timeNow,)
+variables: updated, manager, dbresult, dbcols
+render_template: admin-flights-list.html
+```
 
 ___
 
@@ -238,6 +260,8 @@ ___
     - [x] admin-passenger-booking-cancel.html
     - [x] admin-passenger-booking.html
     - [x] admin-passenger-booking-confirm.html
+    - [x] admin-flights-list.html
+    - [ ] admin-flights-manifest.html
 - [x] static
     - [x] logo_blue.jpg
 - [x] .gitignore | _virtual environment_
